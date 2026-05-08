@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1565C0">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Mediciones Obra</title>
+    <style>
+        :root {
+            --primary: #1565C0; --success: #4CAF50; --warning: #FFC107; --danger: #C62828;
+            --orange: #FF6F00; --certified: #00838F;
+            --bg: #F5F5F5; --surface: #FFFFFF; --text: #212121; --text-secondary: #757575;
+            --border: #E0E0E0; --shadow: 0 1px 4px rgba(0,0,0,0.08);
+            --radius: 10px; --radius-sm: 6px; --alicatado: #1565C0; --solado: #E65100;
+        }
+        .dark-mode {
+            --primary: #1a73e8; --success: #34a853; --warning: #fbbc04; --danger: #ea4335;
+            --orange: #ff6d00; --certified: #00acc1;
+            --bg: #121212; --surface: #1e1e1e; --text: #e0e0e0; --text-secondary: #aaa;
+            --border: #333; --shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); min-height: 100dvh;
+            padding-bottom: 80px; -webkit-tap-highlight-color: transparent; font-size: 14px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .header {
+            background: var(--primary); color: white; padding: 6px 12px;
+            padding-top: max(6px, env(safe-area-inset-top)); position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            font-weight: 600; font-size: 0.9rem; gap: 8px;
+        }
+        .header-left { display: flex; align-items: center; gap: 6px; }
+        .header-badge { background: rgba(255,255,255,0.22); padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; white-space: nowrap; }
+        .btn-icon { width: 30px; height: 30px; padding: 0; border: none; border-radius: 50%; background: rgba(255,255,255,0.2); color: white; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-icon:active { background: rgba(255,255,255,0.35); }
+        .main-content { padding: 6px 8px; max-width: 600px; margin: 0 auto; }
+        .filtro-bar {
+            background: var(--surface); border-radius: var(--radius); padding: 5px 6px;
+            margin-bottom: 6px; box-shadow: var(--shadow); display: flex; gap: 4px;
+            align-items: center; flex-wrap: wrap;
+        }
+        .filtro-bar select {
+            padding: 5px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 0.75rem; background: var(--bg); color: var(--text);
+            -webkit-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23757575' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 8px center;
+            padding-right: 22px; flex: 1; min-width: 0;
+        }
+        .btn-icon-sm {
+            width: 28px; height: 28px; padding: 0; border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+            font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .btn-sm-filter {
+            padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 0.7rem; font-weight: 600; cursor: pointer; background: var(--surface); color: var(--text); white-space: nowrap;
+        }
+        .btn-sm-filter.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-sm-filter.certified-filter.active { background: var(--certified); border-color: var(--certified); }
+        .btn-sm-filter.danger { background: #ffebee; color: var(--danger); border-color: var(--danger); }
+        .btn-sm-filter.danger.active { background: var(--danger); color: white; border-color: var(--danger); }
+        .medicion-card {
+            background: var(--surface); border-radius: 8px; padding: 6px 8px;
+            margin-bottom: 4px; box-shadow: var(--shadow); border-left: 4px solid var(--warning);
+            display: grid; grid-template-columns: 1fr auto; gap: 1px 4px;
+            cursor: pointer; transition: all 0.15s; font-size: 0.8rem;
+        }
+        .medicion-card:active { transform: scale(0.985); }
+        .medicion-card.enviada { border-left-color: var(--success); }
+        .medicion-card.certificada { border-left-color: var(--certified); }
+        .medicion-card.tipo-alicatado { border-left-color: var(--alicatado); }
+        .medicion-card.tipo-solado { border-left-color: var(--solado); }
+        .tipo-badge { font-size: 0.55rem; padding: 1px 4px; border-radius: 5px; font-weight: 700; display: inline-block; margin-right: 2px; }
+        .tipo-alicatado-badge { background: #E3F2FD; color: #1565C0; }
+        .tipo-solado-badge { background: #FFF3E0; color: #E65100; }
+        .badge-pendiente { background: #FFF8E1; color: #F57F17; font-size:0.55rem; padding:1px 4px; border-radius:5px; margin-left:2px; }
+        .badge-enviada { background: #E8F5E9; color: #2E7D32; font-size:0.55rem; padding:1px 4px; border-radius:5px; margin-left:2px; }
+        .badge-certificada { background: #E0F7FA; color: #00838F; font-size:0.55rem; padding:1px 4px; border-radius:5px; margin-left:2px; }
+        .medicion-card .partida-nombre { font-weight: 600; font-size: 0.78rem; grid-column: 1; text-transform: uppercase; }
+        .medicion-card .info-linea { font-size: 0.62rem; color: var(--text-secondary); grid-column: 1; }
+        .medicion-card .resultado { grid-column: 2; grid-row: 1 / 4; text-align: right; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; }
+        .medicion-card .m2 { font-size: 1rem; font-weight: 700; color: var(--success); }
+        .medicion-card .num-lineas { font-size: 0.6rem; color: #999; }
+        .btn { padding: 5px 10px; border: none; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+        .btn:active { transform: scale(0.96); }
+        .btn-sm { padding: 2px 6px; font-size: 0.65rem; border-radius: 4px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-certified { background: var(--certified); color: white; }
+        .btn-danger { background: #ffebee; color: var(--danger); }
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border);
+            display: flex; gap: 4px; padding: 5px 8px; padding-bottom: max(5px, env(safe-area-inset-bottom));
+            z-index: 100; max-width: 600px; margin: 0 auto; border-radius: 14px 14px 0 0; box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+        }
+        .bottom-bar .btn { flex: 1; font-size: 0.7rem; padding: 7px 4px; border-radius: 10px; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: flex-end; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--surface); border-radius: 14px 14px 0 0; padding: 10px 12px;
+            width: 100%; max-width: 600px; max-height: 88vh; overflow-y: auto;
+            animation: slideUp 0.25s ease; position: relative; color: var(--text);
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal h3 { font-size: 0.9rem; margin-bottom: 6px; padding-right: 26px; }
+        .modal-close { position: absolute; top: 6px; right: 10px; background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #999; z-index: 5; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 4px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; }
+        .form-group { margin-bottom: 4px; }
+        .form-group label { display: block; font-size: 0.6rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.3px; }
+        input, select, textarea {
+            width: 100%; padding: 5px 7px; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 0.78rem; font-family: inherit; background: var(--bg); color: var(--text);
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+        select {
+            -webkit-appearance: none; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23757575' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 6px center; padding-right: 20px;
+        }
+        .tipo-selector { display: flex; gap: 4px; margin-bottom: 4px; }
+        .tipo-selector .tipo-btn {
+            flex: 1; padding: 6px; border: 2px solid var(--border); border-radius: var(--radius-sm);
+            text-align: center; font-weight: 600; font-size: 0.72rem; cursor: pointer; background: var(--surface);
+            transition: all 0.15s; color: var(--text);
+        }
+        .tipo-selector .tipo-btn.selected-alicatado { border-color: var(--alicatado); background: #E3F2FD; color: var(--alicatado); }
+        .tipo-selector .tipo-btn.selected-solado { border-color: var(--solado); background: #FFF3E0; color: var(--solado); }
+        .linea-box { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; margin-bottom: 4px; font-size: 0.72rem; }
+        .linea-box .linea-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; font-weight: 600; font-size: 0.62rem; color: var(--text-secondary); }
+        .linea-result { background: #E8F5E9; padding: 2px 6px; border-radius: 3px; display: flex; justify-content: space-between; margin-top: 2px; font-weight: 600; font-size: 0.7rem; }
+        .totales-bar { background: #E8F5E9; padding: 6px 8px; border-radius: 5px; display: flex; justify-content: space-between; font-weight: 700; font-size: 0.78rem; margin-top: 4px; }
+        .toast {
+            position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #323232; color: white;
+            padding: 5px 14px; border-radius: 12px; font-weight: 600; z-index: 300;
+            animation: fadeInOut 2s ease forwards; font-size: 0.75rem; white-space: nowrap;
+        }
+        @keyframes fadeInOut {
+            0% { opacity:0; transform:translateX(-50%) translateY(10px); }
+            15% { opacity:1; transform:translateX(-50%) translateY(0); }
+            80% { opacity:1; } 100% { opacity:0; transform:translateX(-50%) translateY(-10px); }
+        }
+        .empty-state { text-align: center; padding: 30px 15px; color: #bbb; font-size: 0.8rem; }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 8px; }
+        #jsonPreview, #emailPreview { width: 100%; font-family: 'Courier New', monospace; font-size: 0.65rem; background: #1e1e1e; color: #d4d4d4; border-radius: 5px; padding: 6px; border: none; resize: vertical; }
+        #jsonPreview { height: 120px; } #emailPreview { height: 180px; }
+        hr { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+        .quick-stats { display: flex; gap: 4px; margin-bottom: 6px; font-size: 0.65rem; }
+        .quick-stat {
+            flex: 1; background: var(--surface); padding: 4px 6px; border-radius: var(--radius-sm);
+            box-shadow: var(--shadow); text-align: center;
+        }
+        .quick-stat .num { font-size: 0.9rem; font-weight: 700; }
+        .quick-stat.alicatado-stat .num { color: var(--alicatado); }
+        .quick-stat.solado-stat .num { color: var(--solado); }
+        .quick-stat.total-stat .num { color: var(--success); }
+        .select-with-btn { display: flex; gap: 3px; align-items: center; }
+        .select-with-btn select { flex: 1; }
+        .stats-section { margin-top: 6px; }
+        .worker-stat {
+            background: var(--surface); padding: 3px 6px; border-radius: 4px;
+            margin-bottom: 2px; display: flex; justify-content: space-between; font-size: 0.65rem;
+        }
+        @media (min-width: 600px) {
+            .modal { border-radius: 14px; margin: 10px; max-height: 85vh; }
+            .modal-overlay { align-items: center; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-left"><span>🔨 Mediciones</span><span class="header-badge" id="badgeCount">0</span></div>
+    <button class="btn-icon" onclick="toggleDarkMode()" title="Modo oscuro" id="btnDarkMode">🌙</button>
+</header>
+
+<main class="main-content">
+    <div class="filtro-bar">
+        <select id="selectObra" onchange="filtrar()"><option value="">🏗️ Todas las obras</option></select>
+        <button class="btn-icon-sm" onclick="abrirModalNuevaObra()" title="Nueva obra">🏗️➕</button>
+        <button id="btnEliminarObra" class="btn-icon-sm" onclick="eliminarObraSeleccionada()" title="Eliminar obra" style="display:none; background:#ffebee; color:#C62828; border-color:#C62828;">🗑️</button>
+        <button class="btn-icon-sm" onclick="backupData()" title="Copia seguridad">💾</button>
+        <button class="btn-icon-sm" onclick="restoreData()" title="Restaurar copia">📥</button>
+        <button class="btn-sm-filter active" data-tipo="todas" onclick="setFiltroTipo('todas', this)">T</button>
+        <button class="btn-sm-filter" data-tipo="alicatado" onclick="setFiltroTipo('alicatado', this)">🧱</button>
+        <button class="btn-sm-filter" data-tipo="solado" onclick="setFiltroTipo('solado', this)">🟫</button>
+        <button class="btn-sm-filter certified-filter" data-tipo="certificadas" onclick="setFiltroTipo('certificadas', this)">⭐</button>
+    </div>
+
+    <div class="quick-stats">
+        <div class="quick-stat alicatado-stat"><div style="font-size:0.55rem;">🧱</div><div class="num" id="statAlicatado">0</div><div>m²</div></div>
+        <div class="quick-stat solado-stat"><div style="font-size:0.55rem;">🟫</div><div class="num" id="statSolado">0</div><div>m²</div></div>
+        <div class="quick-stat total-stat"><div style="font-size:0.55rem;">📐</div><div class="num" id="statTotal">0</div><div>m²</div></div>
+    </div>
+
+    <div id="workerStats" class="stats-section" style="display:none;"></div>
+    <div id="listaMediciones"></div>
+</main>
+
+<nav class="bottom-bar">
+    <button class="btn btn-outline" onclick="exportarMediciones()">📤 Exportar</button>
+    <button class="btn btn-primary" onclick="abrirModalMedicion()">➕ Nueva</button>
+    <button class="btn btn-outline" onclick="limpiarEnviadas()">🗑️ Limpiar</button>
+</nav>
+
+<!-- MODALES -->
+<div class="modal-overlay" id="modalObraOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalObra()">✕</button><h3>🏗️ Nueva Obra</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="inputNuevaObra" placeholder="Nombre de la obra" autofocus></div>
+    <div id="obraSimilarWarning" style="display:none;background:#FFF8E1;padding:6px;border-radius:4px;margin-bottom:6px;font-size:0.7rem;"></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-outline" onclick="cerrarModalObra()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-success" onclick="crearObra()" style="flex:2;">✅ Crear</button>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalPartidaOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalPartida()">✕</button><h3 id="modalPartidaTitulo">➕ Nueva subpartida</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="inputNuevaPartida" placeholder="Ej: ZÓCALO" autofocus></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-outline" onclick="cerrarModalPartida()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-success" onclick="crearPartida()" style="flex:2;">✅ Añadir</button>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalClienteOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalCliente()">✕</button><h3>👤 Nuevo Cliente</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="inputNuevoCliente" placeholder="Nombre del cliente" autofocus></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-outline" onclick="cerrarModalCliente()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-success" onclick="crearCliente()" style="flex:2;">✅ Añadir</button>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalTrabajadorOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalTrabajador()">✕</button><h3>👷 Nuevo Trabajador</h3>
+    <div class="form-group"><label>Nombre *</label><input type="text" id="inputNuevoTrabajador" placeholder="Nombre del trabajador" autofocus></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-outline" onclick="cerrarModalTrabajador()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-success" onclick="crearTrabajador()" style="flex:2;">✅ Añadir</button>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalOverlay"><div class="modal" id="modalContent">
+    <button class="modal-close" onclick="cerrarModal()">✕</button><h3 id="modalTitulo">📏 Nueva Medición</h3>
+    <div class="form-group"><label>Tipo *</label></div>
+    <div class="tipo-selector">
+        <div class="tipo-btn selected-alicatado" id="tipoAlicatado" onclick="setTipo('alicatado')">🧱 ALICATADO</div>
+        <div class="tipo-btn" id="tipoSolado" onclick="setTipo('solado')">🟫 SOLADO</div>
+    </div>
+    <input type="hidden" id="medTipo" value="alicatado">
+    <div class="form-row">
+        <div class="form-group"><label>Partida *</label><div class="select-with-btn"><select id="medPartida" style="flex:1;"></select><button class="btn-icon-sm" onclick="abrirModalNuevaPartida()">➕</button></div></div>
+        <div class="form-group"><label>Obra *</label><div class="select-with-btn"><select id="medObra" style="flex:1;"></select><button class="btn-icon-sm" onclick="abrirModalNuevaObra()">➕</button></div></div>
+    </div>
+    <div class="form-row">
+        <div class="form-group"><label>Cliente</label><div class="select-with-btn"><select id="medCliente"><option value="">Sin cliente</option></select><button class="btn-icon-sm" onclick="abrirModalNuevoCliente()">➕</button></div></div>
+        <div class="form-group"><label>Trabajador</label><div class="select-with-btn"><select id="medTrabajador"><option value="">Sin trabajador</option></select><button class="btn-icon-sm" onclick="abrirModalNuevoTrabajador()">➕</button></div></div>
+    </div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="medFecha"></div>
+    <hr>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+        <span style="font-weight:600;font-size:0.75rem;">📋 Zonas</span>
+        <button class="btn btn-outline btn-sm" onclick="agregarLinea()">➕ Zona</button>
+    </div>
+    <div id="lineasContainer"></div>
+    <div class="totales-bar" id="totalesBar" style="display:none;">
+        <span>📐 <span id="totalM2">0.00</span> m²</span><span>📋 <span id="totalLineas">0</span> zonas</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+        <button class="btn btn-outline" onclick="cerrarModal()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-success" id="btnGuardar" onclick="guardar()" style="flex:2;">💾 Guardar</button>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalExportOverlay"><div class="modal">
+    <button class="modal-close" onclick="cerrarModalExport()">✕</button><h3>📤 Exportar</h3>
+    <div id="exportResumen" style="margin-bottom:6px;"></div>
+    <div id="exportPreviewVis" style="margin-bottom:6px;font-size:0.7rem;"></div>
+    <div style="display:flex;gap:3px;margin-bottom:8px;">
+        <button class="btn-sm-filter active" id="tabJSON" onclick="cambiarTabExport('json')" style="flex:1;">📋 JSON</button>
+        <button class="btn-sm-filter" id="tabEmail" onclick="cambiarTabExport('email')" style="flex:1;">📧 Email</button>
+    </div>
+    <div id="panelJSON"><textarea id="jsonPreview" readonly></textarea>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+            <button class="btn btn-primary" onclick="copiarJSON()" style="flex:1;">📋 Copiar</button>
+            <button class="btn btn-success" onclick="descargarJSON()" style="flex:1;">💾 Descargar</button>
+        </div>
+        <button class="btn btn-outline" onclick="compartirJSON()" style="width:100%;margin-top:4px;">📱 Compartir</button>
+    </div>
+    <div id="panelEmail" style="display:none;">
+        <div class="form-group"><label>Vista previa</label><textarea id="emailPreview" readonly></textarea></div>
+        <div class="form-group" style="margin-top:6px;"><label>Asunto</label><input type="text" id="emailAsunto" value="Mediciones de Obra"></div>
+        <div style="display:flex;gap:4px;margin-top:6px;">
+            <button class="btn btn-primary" onclick="enviarEmail()" style="flex:1;">📧 Enviar</button>
+            <button class="btn btn-outline" onclick="copiarTextoEmail()" style="flex:1;">📋 Copiar</button>
+        </div>
+    </div>
+</div></div>
+
+<div class="modal-overlay" id="modalConfirmOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalConfirm()">✕</button><h3 id="confirmTitulo">⚠️ Confirmar</h3>
+    <div id="confirmMensaje" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline" onclick="cerrarModalConfirm()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-danger" id="confirmBtn" style="flex:1;">Eliminar</button>
+    </div>
+</div></div>
+
+<div id="toastContainer"></div>
+
+<script>
+// ═══════════ DATOS ═══════════
+const SUBPARTIDAS = {
+    alicatado: ['COCINA','BAÑO','ASEO','LAVADERO','FACHADA','ZONA COMÚN','PATIO','TERRAZA','ESCALERA'],
+    solado: ['COCINA','BAÑO','ASEO','SALÓN','DORMITORIO','PASILLO','TERRAZA','PATIO','GARAJE','ZONA COMÚN','ESCALERA','LAVADERO']
+};
+const STORAGE_KEY = 'mediciones_obra_data_v12';
+
+let appData = (() => {
+    try {
+        const d = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (d && Array.isArray(d.obras) && Array.isArray(d.mediciones)) {
+            if (!d.subpartidas_personalizadas) d.subpartidas_personalizadas = { alicatado: [], solado: [] };
+            if (!d.clientes) d.clientes = [];
+            if (!d.trabajadores) d.trabajadores = [];
+            return d;
+        }
+    } catch(e) {}
+    return { obras: [], mediciones: [], subpartidas_personalizadas: { alicatado: [], solado: [] }, clientes: [], trabajadores: [], darkMode: false };
+})();
+
+let editIdx = -1, filtroTipoActual = 'todas', tabExportActual = 'json', confirmCallback = null;
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); }
+
+// ═══════════ MODO OSCURO ═══════════
+function toggleDarkMode() {
+    appData.darkMode = !appData.darkMode;
+    document.body.classList.toggle('dark-mode', appData.darkMode);
+    document.getElementById('btnDarkMode').textContent = appData.darkMode ? '☀️' : '🌙';
+    save();
+}
+if (appData.darkMode) { document.body.classList.add('dark-mode'); document.getElementById('btnDarkMode').textContent = '☀️'; }
+
+// ═══════════ NORMALIZAR ═══════════
+function normalizar(s) {
+    if (!s) return '';
+    s = s.trim().toUpperCase();
+    const ac = {'Á':'A','É':'E','Í':'I','Ó':'O','Ú':'U','Ü':'U','Ñ':'N'};
+    for (const [a,sin] of Object.entries(ac)) s = s.replace(new RegExp(a,'g'), sin);
+    return s.replace(/\s+/g, ' ');
+}
+
+// ═══════════ OBRAS ═══════════
+function abrirModalNuevaObra() {
+    document.getElementById('inputNuevaObra').value = '';
+    document.getElementById('obraSimilarWarning').style.display = 'none';
+    document.getElementById('modalObraOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('inputNuevaObra').focus(), 300);
+    document.getElementById('inputNuevaObra').addEventListener('input', buscarObrasSimilares);
+}
+function cerrarModalObra() { document.getElementById('modalObraOverlay').classList.remove('active'); }
+
+function buscarObrasSimilares() {
+    const nombre = document.getElementById('inputNuevaObra').value.trim();
+    const warning = document.getElementById('obraSimilarWarning');
+    if (!nombre || nombre.length < 2) { warning.style.display = 'none'; return; }
+    const nombreN = normalizar(nombre);
+    const similares = appData.obras.filter(o => {
+        const oN = normalizar(o);
+        return oN !== nombreN && (oN.includes(nombreN) || nombreN.includes(oN) || 
+            oN.split(' ').some(p => nombreN.includes(p)) || nombreN.split(' ').some(p => oN.includes(p)));
+    });
+    if (similares.length > 0) {
+        warning.style.display = 'block';
+        warning.innerHTML = `⚠️ Obras similares:<br>${similares.map(s => `• ${s}`).join('<br>')}<br><small>Revisa si ya existe antes de crear</small>`;
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
+function crearObra() {
+    const nombre = document.getElementById('inputNuevaObra').value.trim();
+    if (!nombre) return toast('⚠️ Introduce un nombre');
+    const nombreN = normalizar(nombre);
+    const existente = appData.obras.find(o => normalizar(o) === nombreN);
+    if (existente) {
+        if (confirm(`⚠️ Ya existe "${existente}".\n¿Usar esta obra existente?`)) {
+            cerrarModalObra();
+            initObras();
+            document.getElementById('selectObra').value = existente;
+            render();
+            toast('✅ Obra seleccionada');
+            return;
+        }
+    }
+    if (appData.obras.includes(nombre)) return toast('⚠️ Esa obra ya existe');
+    appData.obras.push(nombre); appData.obras.sort(); save(); cerrarModalObra(); initObras();
+    if (document.getElementById('modalOverlay').classList.contains('active')) { initObrasModal(); document.getElementById('medObra').value = nombre; }
+    render(); toast('🏗️ Obra creada');
+}
+
+// ═══════════ ELIMINAR OBRA ═══════════
+function eliminarObraSeleccionada() {
+    const obraSel = document.getElementById('selectObra').value;
+    if (!obraSel) return;
+    
+    const medicionesAsociadas = appData.mediciones.filter(m => m.site_name === obraSel);
+    let totalM2 = 0;
+    medicionesAsociadas.forEach(m => {
+        m.lineas.forEach(l => totalM2 += l.parcial || 0);
+    });
+    
+    mostrarConfirmacion(
+        '🗑️ Eliminar Obra',
+        `<div style="margin-bottom:8px;"><strong>${obraSel}</strong></div>
+         <div style="background:#ffebee; padding:8px; border-radius:4px; margin:8px 0;">
+            📊 ${medicionesAsociadas.length} mediciones asociadas<br>
+            📐 ${totalM2.toFixed(2)} m² totales
+         </div>
+         <div style="color:var(--danger); font-weight:bold;">⚠️ Esta acción NO se puede deshacer. Se eliminarán TODAS las mediciones de esta obra.</div>`,
+        function() {
+            // Eliminar la obra y sus mediciones
+            const index = appData.obras.indexOf(obraSel);
+            if (index !== -1) appData.obras.splice(index, 1);
+            appData.mediciones = appData.mediciones.filter(m => m.site_name !== obraSel);
+            save();
+            
+            // Limpiar filtro si estaba seleccionada
+            if (document.getElementById('selectObra').value === obraSel) {
+                document.getElementById('selectObra').value = '';
+            }
+            initObras();
+            render();
+            toast('✅ Obra y mediciones eliminadas');
+            cerrarModalConfirm();
+        }
+    );
+}
+
+// ═══════════ CONFIRMACIÓN MODAL ═══════════
+function mostrarConfirmacion(titulo, mensaje, onConfirm) {
+    document.getElementById('confirmTitulo').textContent = titulo;
+    document.getElementById('confirmMensaje').innerHTML = mensaje;
+    confirmCallback = onConfirm;
+    document.getElementById('modalConfirmOverlay').classList.add('active');
+}
+function cerrarModalConfirm() {
+    document.getElementById('modalConfirmOverlay').classList.remove('active');
+    confirmCallback = null;
+}
+function ejecutarConfirmacion() {
+    if (confirmCallback) confirmCallback();
+    cerrarModalConfirm();
+}
+
+// ═══════════ SUBPARTIDAS ═══════════
+function getSubpartidas(tipo) {
+    const base = SUBPARTIDAS[tipo] || [];
+    const extras = appData.subpartidas_personalizadas[tipo] || [];
+    return [...new Set([...base, ...extras])].sort();
+}
+function abrirModalNuevaPartida() {
+    document.getElementById('modalPartidaTitulo').textContent = '➕ Subpartida de ' + (document.getElementById('medTipo').value==='alicatado'?'ALICATADO':'SOLADO');
+    document.getElementById('inputNuevaPartida').value = ''; document.getElementById('modalPartidaOverlay').classList.add('active');
+    setTimeout(() => document.getElementById('inputNuevaPartida').focus(), 300);
+}
+function cerrarModalPartida() { document.getElementById('modalPartidaOverlay').classList.remove('active'); }
+function crearPartida() {
+    const n = document.getElementById('inputNuevaPartida').value.trim().toUpperCase();
+    if (!n) return toast('⚠️ Introduce un nombre');
+    const t = document.getElementById('medTipo').value;
+    if (getSubpartidas(t).includes(n)) return toast('⚠️ Ya existe');
+    appData.subpartidas_personalizadas[t].push(n); save(); cerrarModalPartida(); actualizarSelectPartidas();
+    setTimeout(() => document.getElementById('medPartida').value = n, 100);
+    toast('📋 Añadida');
+}
+function actualizarSelectPartidas() {
+    const p = getSubpartidas(document.getElementById('medTipo').value), s = document.getElementById('medPartida'), v = s.value;
+    s.innerHTML = p.map(x => `<option value="${x}">${x}</option>`).join('');
+    if (p.includes(v)) s.value = v;
+}
+
+// ═══════════ CLIENTES ═══════════
+function abrirModalNuevoCliente() { document.getElementById('inputNuevoCliente').value=''; document.getElementById('modalClienteOverlay').classList.add('active'); setTimeout(()=>document.getElementById('inputNuevoCliente').focus(),300); }
+function cerrarModalCliente() { document.getElementById('modalClienteOverlay').classList.remove('active'); }
+function crearCliente() {
+    const n = document.getElementById('inputNuevoCliente').value.trim();
+    if (!n) return toast('⚠️ Introduce un nombre');
+    if (appData.clientes.includes(n)) return toast('⚠️ Ya existe');
+    appData.clientes.push(n); appData.clientes.sort(); save(); cerrarModalCliente(); actualizarSelectClientes();
+    setTimeout(() => document.getElementById('medCliente').value = n, 100);
+    toast('👤 Cliente añadido');
+}
+function actualizarSelectClientes() {
+    const s = document.getElementById('medCliente'), v = s.value;
+    s.innerHTML = '<option value="">Sin cliente</option>' + appData.clientes.map(c => `<option value="${c}">${c}</option>`).join('');
+    if (appData.clientes.includes(v)) s.value = v;
+}
+
+// ═══════════ TRABAJADORES ═══════════
+function abrirModalNuevoTrabajador() { document.getElementById('inputNuevoTrabajador').value=''; document.getElementById('modalTrabajadorOverlay').classList.add('active'); setTimeout(()=>document.getElementById('inputNuevoTrabajador').focus(),300); }
+function cerrarModalTrabajador() { document.getElementById('modalTrabajadorOverlay').classList.remove('active'); }
+function crearTrabajador() {
+    const n = document.getElementById('inputNuevoTrabajador').value.trim();
+    if (!n) return toast('⚠️ Introduce un nombre');
+    if (appData.trabajadores.includes(n)) return toast('⚠️ Ya existe');
+    appData.trabajadores.push(n); appData.trabajadores.sort(); save(); cerrarModalTrabajador(); actualizarSelectTrabajadores();
+    setTimeout(() => document.getElementById('medTrabajador').value = n, 100);
+    toast('👷 Añadido');
+}
+function actualizarSelectTrabajadores() {
+    const s = document.getElementById('medTrabajador'), v = s.value;
+    s.innerHTML = '<option value="">Sin trabajador</option>' + appData.trabajadores.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (appData.trabajadores.includes(v)) s.value = v;
+}
+
+// ═══════════ FILTROS ═══════════
+function setFiltroTipo(tipo, btn) {
+    filtroTipoActual = tipo;
+    document.querySelectorAll('.btn-sm-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filtrar();
+}
+function filtrar() { render(); }
+
+// ═══════════ RENDER ═══════════
+function initObras() {
+    const s = document.getElementById('selectObra'), v = s.value;
+    s.innerHTML = appData.obras.length === 0 ? '<option value="">🏗️ Sin obras</option>' : '<option value="">🏗️ Todas las obras</option>' + appData.obras.map(o => `<option value="${o}">${o}</option>`).join('');
+    s.value = v;
+    
+    // Mostrar/ocultar botón de eliminar obra
+    const btnEliminar = document.getElementById('btnEliminarObra');
+    if (v && v !== '') {
+        btnEliminar.style.display = 'flex';
+        btnEliminar.title = `Eliminar obra: ${v}`;
+    } else {
+        btnEliminar.style.display = 'none';
+    }
+}
+function initObrasModal() {
+    const s = document.getElementById('medObra');
+    s.innerHTML = appData.obras.length === 0 ? '<option value="">⚠️ Crea una obra</option>' : appData.obras.map(o => `<option value="${o}">${o}</option>`).join('');
+}
+function setTipo(tipo) {
+    document.getElementById('medTipo').value = tipo;
+    document.getElementById('tipoAlicatado').className = 'tipo-btn' + (tipo==='alicatado'?' selected-alicatado':'');
+    document.getElementById('tipoSolado').className = 'tipo-btn' + (tipo==='solado'?' selected-solado':'');
+    actualizarSelectPartidas();
+}
+function nombreCompletoPartida(m) { return (m.tipo==='alicatado'?'ALICATADO':'SOLADO')+' - '+m.subpartida; }
+function estadoBadge(m) {
+    if (m.certificada) return '<span class="badge-certificada">⭐</span>';
+    if (m.enviada) return '<span class="badge-enviada">✓</span>';
+    return '<span class="badge-pendiente">PEND</span>';
+}
+
+function render() {
+    const obraSel = document.getElementById('selectObra').value;
+    let meds = obraSel ? appData.mediciones.filter(m => m.site_name === obraSel) : appData.mediciones;
+    if (filtroTipoActual === 'certificadas') meds = meds.filter(m => m.certificada);
+    else if (filtroTipoActual !== 'todas') meds = meds.filter(m => m.tipo === filtroTipoActual);
+    
+    document.getElementById('badgeCount').textContent = meds.length;
+    const c = document.getElementById('listaMediciones');
+    const medsStats = obraSel ? appData.mediciones.filter(m => m.site_name === obraSel) : appData.mediciones;
+    const stats = { alicatado: 0, solado: 0 };
+    const workerStats = {};
+    medsStats.forEach(m => {
+        let t = 0; m.lineas.forEach(l => t += l.parcial || 0);
+        if (m.tipo === 'alicatado') stats.alicatado += t; else stats.solado += t;
+        const w = m.trabajador || 'Sin trabajador';
+        if (!workerStats[w]) workerStats[w] = { alicatado: 0, solado: 0 };
+        if (m.tipo === 'alicatado') workerStats[w].alicatado += t; else workerStats[w].solado += t;
+    });
+    document.getElementById('statAlicatado').textContent = stats.alicatado.toFixed(2);
+    document.getElementById('statSolado').textContent = stats.solado.toFixed(2);
+    document.getElementById('statTotal').textContent = (stats.alicatado + stats.solado).toFixed(2);
+
+    // Stats por trabajador
+    const wsDiv = document.getElementById('workerStats');
+    if (Object.keys(workerStats).length > 0 && obraSel) {
+        wsDiv.style.display = 'block';
+        wsDiv.innerHTML = '<div style="font-weight:600;font-size:0.7rem;margin-bottom:2px;">👷 Por trabajador:</div>' +
+            Object.entries(workerStats).sort((a,b) => (b[1].alicatado+b[1].solado) - (a[1].alicatado+a[1].solado)).map(([w,s]) =>
+                `<div class="worker-stat"><span>${w}</span><span>🧱${s.alicatado.toFixed(1)} 🟫${s.solado.toFixed(1)} 📐${(s.alicatado+s.solado).toFixed(1)}</span></div>`
+            ).join('');
+    } else { wsDiv.style.display = 'none'; }
+
+    if (appData.obras.length === 0) { c.innerHTML = '<div class="empty-state"><div class="icon">🏗️</div><p>No hay obras</p><button class="btn btn-primary" onclick="abrirModalNuevaObra()">🏗️➕ Crear obra</button></div>'; return; }
+    if (!meds.length) { c.innerHTML = `<div class="empty-state"><div class="icon">📐</div><p>Sin mediciones${obraSel?' en esta obra':''}</p></div>`; return; }
+
+    c.innerHTML = meds.map((m, i) => {
+        const actualIdx = appData.mediciones.indexOf(m);
+        const tipoBadge = m.tipo==='alicatado'?'<span class="tipo-badge tipo-alicatado-badge">🧱</span>':'<span class="tipo-badge tipo-solado-badge">🟫</span>';
+        let tM2 = 0; m.lineas.forEach(l => tM2 += l.parcial || 0);
+        const l1 = m.lineas[0] || {};
+        const cls = m.certificada ? 'certificada' : (m.enviada ? 'enviada' : (m.tipo==='alicatado'?'tipo-alicatado':'tipo-solado'));
+        return `<div class="medicion-card ${cls}" onclick="editar(${actualIdx})">
+            <div class="partida-nombre">${tipoBadge} ${nombreCompletoPartida(m)} ${estadoBadge(m)}</div>
+            <div class="info-linea">${l1.bloque?'B:'+l1.bloque:''}${l1.planta?' P:'+l1.planta:''}${l1.largo?' '+l1.largo+'×'+l1.ancho+'m':''}${m.lineas.length>1?` +${m.lineas.length-1}z`:''}</div>
+            <div class="info-linea" style="color:#aaa;">🏗️${m.site_name||'—'} 👤${m.trabajador||'—'} ${m.cliente||''}</div>
+            <div class="resultado"><div class="m2">${tM2.toFixed(2)}</div><div class="num-lineas">m²</div></div>
+        </div>`;
+    }).join('');
+}
+
+// ═══════════ MODAL MEDICIÓN ═══════════
+function abrirModalMedicion(idx = -1) {
+    if (appData.obras.length === 0) { toast('⚠️ Crea una obra primero'); abrirModalNuevaObra(); return; }
+    editIdx = idx;
+    document.getElementById('modalTitulo').textContent = idx >= 0 ? '✏️ Editar' : '📏 Nueva';
+    document.getElementById('btnGuardar').textContent = idx >= 0 ? '💾 Actualizar' : '💾 Guardar';
+    initObrasModal(); actualizarSelectClientes(); actualizarSelectTrabajadores();
+    if (idx >= 0) {
+        const m = appData.mediciones[idx];
+        document.getElementById('medObra').value = m.site_name;
+        setTipo(m.tipo || 'alicatado');
+        setTimeout(() => document.getElementById('medPartida').value = m.subpartida || '', 50);
+        if (m.cliente && !appData.clientes.includes(m.cliente)) { appData.clientes.push(m.cliente); appData.clientes.sort(); save(); actualizarSelectClientes(); }
+        document.getElementById('medCliente').value = m.cliente || '';
+        if (m.trabajador && !appData.trabajadores.includes(m.trabajador)) { appData.trabajadores.push(m.trabajador); appData.trabajadores.sort(); save(); actualizarSelectTrabajadores(); }
+        document.getElementById('medTrabajador').value = m.trabajador || '';
+        document.getElementById('medFecha').value = m.fecha || '';
+        document.getElementById('lineasContainer').innerHTML = ''; m.lineas.forEach(l => agregarLinea(l));
+    } else {
+        setTipo('alicatado'); document.getElementById('medCliente').value = '';
+        document.getElementById('medTrabajador').value = '';
+        document.getElementById('medFecha').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('lineasContainer').innerHTML = ''; agregarLinea();
+    }
+    document.getElementById('modalOverlay').classList.add('active'); actualizarTotales();
+}
+function cerrarModal() { document.getElementById('modalOverlay').classList.remove('active'); editIdx = -1; }
+
+// ═══════════ LÍNEAS ═══════════
+function agregarLinea(d = null) {
+    const container = document.getElementById('lineasContainer'), num = container.children.length + 1;
+    const div = document.createElement('div'); div.className = 'linea-box';
+    div.innerHTML = `<div class="linea-header"><span>📍 Zona ${num}</span><button class="btn btn-sm btn-danger" onclick="this.closest('.linea-box').remove();actualizarTotales();">✕</button></div>
+    <div class="form-row-3"><div class="form-group"><label>Bloque</label><input class="lbloque" value="${d?.bloque||''}" placeholder="A"></div><div class="form-group"><label>Planta</label><input class="lplanta" value="${d?.planta||''}" placeholder="1"></div><div class="form-group"><label>Unid</label><input type="number" class="lunidades" value="${d?.unidades||'1'}" min="0" step="1" onchange="calc(this.closest('.linea-box'));actualizarTotales();"></div></div>
+    <div class="form-row"><div class="form-group"><label>Largo (m)</label><input type="number" class="llargo" value="${d?.largo||''}" step="0.01" min="0" onchange="calc(this.closest('.linea-box'));actualizarTotales();" placeholder="0.00"></div><div class="form-group"><label>Ancho (m)</label><input type="number" class="lancho" value="${d?.ancho||''}" step="0.01" min="0" onchange="calc(this.closest('.linea-box'));actualizarTotales();" placeholder="0.00"></div></div>
+    <div class="linea-result"><span>📐 <strong class="lparcialTxt">${(d?.parcial||0).toFixed(2)}</strong> m²</span></div>
+    <input type="hidden" class="lparcial" value="${d?.parcial||0}">`;
+    container.appendChild(div); if (!d) calc(div);
+}
+function calc(div) { const u = parseFloat(div.querySelector('.lunidades').value)||0, la = parseFloat(div.querySelector('.llargo').value)||0, an = parseFloat(div.querySelector('.lancho').value)||0, p = la*an*u; div.querySelector('.lparcialTxt').textContent = p.toFixed(2); div.querySelector('.lparcial').value = p; }
+function actualizarTotales() { let t = 0; document.querySelectorAll('#lineasContainer .linea-box').forEach(d => t += parseFloat(d.querySelector('.lparcial').value)||0); const n = document.getElementById('lineasContainer').children.length; document.getElementById('totalM2').textContent = t.toFixed(2); document.getElementById('totalLineas').textContent = n; document.getElementById('totalesBar').style.display = n ? 'flex' : 'none'; }
+
+// ═══════════ GUARDAR ═══════════
+function guardar() {
+    const site = document.getElementById('medObra').value;
+    if (!site || site.includes('⚠️')) return toast('⚠️ Selecciona obra');
+    const tipo = document.getElementById('medTipo').value, subpartida = document.getElementById('medPartida').value;
+    if (!subpartida) return toast('⚠️ Selecciona partida');
+    const clienteVal = document.getElementById('medCliente').value;
+    if (clienteVal && !appData.clientes.includes(clienteVal)) { appData.clientes.push(clienteVal); appData.clientes.sort(); save(); actualizarSelectClientes(); }
+    const trabajadorVal = document.getElementById('medTrabajador').value;
+    if (trabajadorVal && !appData.trabajadores.includes(trabajadorVal)) { appData.trabajadores.push(trabajadorVal); appData.trabajadores.sort(); save(); actualizarSelectTrabajadores(); }
+    const lineas = []; document.querySelectorAll('#lineasContainer .linea-box').forEach(d => lineas.push({bloque:d.querySelector('.lbloque').value.trim(),planta:d.querySelector('.lplanta').value.trim(),concepto:'',unidades:parseFloat(d.querySelector('.lunidades').value)||0,largo:parseFloat(d.querySelector('.llargo').value)||0,ancho:parseFloat(d.querySelector('.lancho').value)||0,parcial:parseFloat(d.querySelector('.lparcial').value)||0,precio:0,importe:0}));
+    if (!lineas.length) return toast('⚠️ Añade al menos una zona');
+    const med = {tipo,subpartida,partida_codigo:(tipo==='alicatado'?'ALICATADO':'SOLADO')+' - '+subpartida,site_name:site,cliente:clienteVal,fecha:document.getElementById('medFecha').value,trabajador:trabajadorVal,lineas,enviada:false,certificada:false,created_at:new Date().toISOString()};
+    if (editIdx >= 0) { med.enviada = appData.mediciones[editIdx].enviada; med.certificada = appData.mediciones[editIdx].certificada; appData.mediciones[editIdx] = med; }
+    else { appData.mediciones.push(med); }
+    save(); cerrarModal(); initObras(); render(); toast('✅ Guardado');
+}
+function editar(idx) { abrirModalMedicion(idx); }
+
+// ═══════════ DUPLICAR ═══════════
+function duplicarMedicion(idx) {
+    const orig = appData.mediciones[idx];
+    if (!orig) return;
+    const copia = JSON.parse(JSON.stringify(orig));
+    copia.enviada = false; copia.certificada = false; copia.created_at = new Date().toISOString();
+    copia.lineas = copia.lineas.map(l => ({...l}));
+    appData.mediciones.push(copia); save(); render();
+    toast('📋 Duplicada');
+}
+
+// ═══════════ ELIMINAR MEDICIÓN ═══════════
+function eliminarMedicion(idx) {
+    const m = appData.mediciones[idx];
+    if (!m) return;
+    let tM2 = 0; m.lineas.forEach(l => tM2 += l.parcial || 0);
+    mostrarConfirmacion(
+        '🗑️ Eliminar Medición',
+        `<div><strong>${m.tipo==='alicatado'?'🧱':'🟫'} ${nombreCompletoPartida(m)}</strong></div>
+         <div style="margin:8px 0;">📐 ${tM2.toFixed(2)} m² | ${m.lineas.length} zona(s)<br>👤 ${m.trabajador||'—'}<br>🏗️ ${m.site_name||'—'}</div>
+         <div style="color:var(--danger);">⚠️ Esta acción no se puede deshacer.</div>`,
+        function() {
+            appData.mediciones.splice(idx, 1);
+            save();
+            initObras();
+            render();
+            toast('🗑️ Medición eliminada');
+        }
+    );
+}
+
+// ═══════════ CERTIFICAR ═══════════
+function toggleCertificada(idx) {
+    const m = appData.mediciones[idx];
+    if (!m) return;
+    m.certificada = !m.certificada;
+    if (m.certificada) m.enviada = true;
+    save(); render();
+    toast(m.certificada ? '⭐ Certificada' : '↩️ Desmarcada');
+}
+
+// ═══════════ EXPORTAR ═══════════
+function cambiarTabExport(tab) {
+    tabExportActual = tab;
+    document.getElementById('tabJSON').classList.toggle('active', tab==='json');
+    document.getElementById('tabEmail').classList.toggle('active', tab==='email');
+    document.getElementById('panelJSON').style.display = tab==='json'?'block':'none';
+    document.getElementById('panelEmail').style.display = tab==='email'?'block':'none';
+    if (tab==='email') generarTextoEmail();
+}
+function getMedicionesPendientes() { return appData.mediciones.filter(m => !m.enviada && !m.certificada); }
+function genJSON() {
+    const p = getMedicionesPendientes();
+    return {tipo_exportacion:'mediciones_obra',version:'1.0',fecha_exportacion:new Date().toISOString(),total_mediciones:p.length,
+        mediciones:p.map(m=>({tipo:m.tipo,subpartida:m.subpartida,partida_codigo:String(m.partida_codigo||''),site_name:m.site_name,cliente:m.cliente||'',fecha:m.fecha,trabajador:m.trabajador||'',
+            lineas:m.lineas.map(l=>({bloque:l.bloque||'',planta:l.planta||'',concepto:'',unidades:String(l.unidades||'1'),largo:l.largo||0,ancho:l.ancho||0,parcial:l.parcial||0,precio:0,importe:0}))}))};
+}
+function generarTextoEmail() {
+    const mediciones = getMedicionesPendientes();
+    if (!mediciones.length) { document.getElementById('emailPreview').value = 'Sin mediciones pendientes.'; return ''; }
+    const porObra = {}; mediciones.forEach(m => { const o = m.site_name||'Sin obra'; if (!porObra[o]) porObra[o] = []; porObra[o].push(m); });
+    let txt = `══════════════════════════════════════════\n  MEDICIONES DE OBRA\n  Fecha: ${new Date().toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}\n══════════════════════════════════════════\n\n`;
+    let tgA=0,tgS=0;
+    for (const [obra,meds] of Object.entries(porObra)) {
+        txt += `🏗️ OBRA: ${obra.toUpperCase()}\n──────────────────────────────────────────\n`;
+        let toA=0,toS=0;
+        const alic = meds.filter(m=>m.tipo==='alicatado'), sol = meds.filter(m=>m.tipo==='solado');
+        if (alic.length) { txt += '\n  🧱 ALICATADOS:\n'; alic.forEach(m => { let t=0; m.lineas.forEach(l=>t+=l.parcial||0); toA+=t; txt += `    • ${nombreCompletoPartida(m)}${m.cliente?' (Cliente: '+m.cliente:''} - Trab: ${m.trabajador||'—'}\n`; m.lineas.forEach((l,i) => txt += `      ${(l.largo||0).toFixed(2)}×${(l.ancho||0).toFixed(2)} = ${(l.parcial||0).toFixed(2)} m²${l.bloque?' | B:'+l.bloque:''}${l.planta?' | P:'+l.planta:''}${m.lineas.length>1?' | Z'+(i+1):''}\n`); if (m.lineas.length>1) txt += '      ───────────\n'; txt += `      Total: ${t.toFixed(2)} m²\n\n`; }); txt += `    Subtotal alicatado: ${toA.toFixed(2)} m²\n`; }
+        if (sol.length) { txt += '\n  🟫 SOLADOS:\n'; sol.forEach(m => { let t=0; m.lineas.forEach(l=>t+=l.parcial||0); toS+=t; txt += `    • ${nombreCompletoPartida(m)}${m.cliente?' (Cliente: '+m.cliente:''} - Trab: ${m.trabajador||'—'}\n`; m.lineas.forEach((l,i) => txt += `      ${(l.largo||0).toFixed(2)}×${(l.ancho||0).toFixed(2)} = ${(l.parcial||0).toFixed(2)} m²${l.bloque?' | B:'+l.bloque:''}${l.planta?' | P:'+l.planta:''}${m.lineas.length>1?' | Z'+(i+1):''}\n`); if (m.lineas.length>1) txt += '      ───────────\n'; txt += `      Total: ${t.toFixed(2)} m²\n\n`; }); txt += `    Subtotal solado: ${toS.toFixed(2)} m²\n`; }
+        txt += `\n  📐 TOTAL OBRA: ${(toA+toS).toFixed(2)} m²\n──────────────────────────────────────────\n\n`; tgA+=toA; tgS+=toS;
+    }
+    txt += `══════════════════════════════════════════\n  RESUMEN\n══════════════════════════════════════════\n  🧱 Total alicatados: ${tgA.toFixed(2)} m²\n  🟫 Total solados: ${tgS.toFixed(2)} m²\n  📐 TOTAL: ${(tgA+tgS).toFixed(2)} m²\n  📊 ${mediciones.length} meds en ${Object.keys(porObra).length} obra(s)\n══════════════════════════════════════════\n`;
+    document.getElementById('emailPreview').value = txt; return txt;
+}
+function exportarMediciones() {
+    const meds = getMedicionesPendientes();
+    if (!meds.length) return toast('⚠️ Sin mediciones pendientes');
+    document.getElementById('jsonPreview').value = JSON.stringify(genJSON(), null, 2);
+    generarTextoEmail();
+    let tm=0,ta=0,ts=0; meds.forEach(m=>{m.lineas.forEach(l=>tm+=l.parcial||0);if(m.tipo==='alicatado')m.lineas.forEach(l=>ta+=l.parcial||0);else m.lineas.forEach(l=>ts+=l.parcial||0);});
+    document.getElementById('exportResumen').innerHTML = `<div style="background:#F0F7FF;padding:6px;border-radius:5px;font-size:0.7rem;">📊 ${meds.length} meds | 📐 ${tm.toFixed(2)} m² | 🏗️ ${[...new Set(meds.map(m=>m.site_name))].length} obras<br>🧱 ${ta.toFixed(2)} | 🟫 ${ts.toFixed(2)}</div>`;
+    const porObra = {}; meds.forEach(m => { if (!porObra[m.site_name]) porObra[m.site_name] = []; porObra[m.site_name].push(m); });
+    document.getElementById('exportPreviewVis').innerHTML = Object.entries(porObra).map(([o,ms]) => `<div style="margin-bottom:4px;"><b>🏗️ ${o}</b>: ${ms.map(m=>`${m.tipo==='alicatado'?'🧱':'🟫'} ${m.subpartida} (${m.lineas.reduce((a,l)=>a+(l.parcial||0),0).toFixed(1)}m²)`).join(', ')}</div>`).join('');
+    cambiarTabExport('json'); document.getElementById('modalExportOverlay').classList.add('active');
+}
+function cerrarModalExport() { document.getElementById('modalExportOverlay').classList.remove('active'); }
+function copiarJSON() { navigator.clipboard.writeText(document.getElementById('jsonPreview').value).then(()=>{toast('📋 Copiado');marcarEnviadas();}); }
+function descargarJSON() { const b=new Blob([JSON.stringify(genJSON(),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=`mediciones_${new Date().toISOString().slice(0,10)}.json`; a.click(); toast('💾 Descargado'); marcarEnviadas(); }
+function compartirJSON() { const js=JSON.stringify(genJSON(),null,2); if(navigator.share&&navigator.canShare){navigator.share({title:'Mediciones',text:'Mediciones de obra',files:[new File([new Blob([js])],'mediciones.json',{type:'application/json'})]}).then(()=>marcarEnviadas()).catch(()=>copiarJSON());}else copiarJSON(); }
+function enviarEmail() { const txt=document.getElementById('emailPreview').value; if(!txt||txt.includes('Sin mediciones'))return toast('⚠️ Sin datos'); window.open(`mailto:?subject=${encodeURIComponent(document.getElementById('emailAsunto').value||'Mediciones')}&body=${encodeURIComponent(txt)}`,'_blank'); toast('📧 Abriendo email...'); }
+function copiarTextoEmail() { const txt=document.getElementById('emailPreview').value; if(!txt||txt.includes('Sin mediciones'))return toast('⚠️ Sin texto'); navigator.clipboard.writeText(txt).then(()=>toast('📋 Copiado')); }
+function marcarEnviadas() { appData.mediciones.forEach(m=>{if(!m.enviada&&!m.certificada)m.enviada=true;}); save(); render(); }
+function limpiarEnviadas() { 
+    const e=appData.mediciones.filter(m=>m.enviada&&!m.certificada); 
+    if(!e.length)return toast('ℹ️ Nada que limpiar'); 
+    mostrarConfirmacion(
+        '🗑️ Limpiar Mediciones Enviadas',
+        `<div>Se eliminarán <strong>${e.length}</strong> mediciones enviadas no certificadas.</div>
+         <div style="color:var(--danger); margin-top:8px;">⚠️ Esta acción no se puede deshacer.</div>`,
+        function() {
+            appData.mediciones=appData.mediciones.filter(m=>!m.enviada||m.certificada);
+            save();
+            initObras();
+            render();
+            toast('🗑️ Limpiado');
+        }
+    );
+}
+
+// ═══════════ BACKUP ═══════════
+function backupData() {
+    const data = JSON.stringify(appData, null, 2);
+    const b = new Blob([data], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = `copia_seguridad_mediciones_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    toast('💾 Copia de seguridad descargada');
+}
+function restoreData() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.json';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const data = JSON.parse(ev.target.result);
+                if (!data.obras || !data.mediciones) return toast('⚠️ Formato no válido');
+                mostrarConfirmacion(
+                    '📥 Restaurar Copia',
+                    `<div>Se restaurarán:<br>📊 ${data.mediciones.length} mediciones<br>🏗️ ${data.obras.length} obras<br><br>Los datos actuales se sobrescribirán.</div>`,
+                    function() {
+                        appData = data;
+                        if (!appData.subpartidas_personalizadas) appData.subpartidas_personalizadas = { alicatado: [], solado: [] };
+                        if (!appData.clientes) appData.clientes = [];
+                        if (!appData.trabajadores) appData.trabajadores = [];
+                        save(); initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); render();
+                        toast('📥 Copia restaurada');
+                    }
+                );
+            } catch(ex) { toast('⚠️ Error al leer archivo'); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+function toast(msg) { const t=document.createElement('div');t.className='toast';t.textContent=msg;document.getElementById('toastContainer').appendChild(t);setTimeout(()=>t.remove(),2000); }
+
+// ═══════════ EVENTOS ═══════════
+const modales = [
+    ['modalObraOverlay', cerrarModalObra],
+    ['modalPartidaOverlay', cerrarModalPartida],
+    ['modalClienteOverlay', cerrarModalCliente],
+    ['modalTrabajadorOverlay', cerrarModalTrabajador],
+    ['modalOverlay', cerrarModal],
+    ['modalExportOverlay', cerrarModalExport],
+    ['modalConfirmOverlay', cerrarModalConfirm]
+];
+modales.forEach(([id, fn]) => document.getElementById(id).addEventListener('click', function(e) { if (e.target === this) fn(); }));
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        for (const [id, fn] of modales) { if (document.getElementById(id).classList.contains('active')) { fn(); break; } }
+    }
+});
+document.getElementById('confirmBtn').addEventListener('click', ejecutarConfirmacion);
+
+['inputNuevaObra','inputNuevaPartida','inputNuevoCliente','inputNuevoTrabajador'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', function(e) { if (e.key === 'Enter') {
+        if (id === 'inputNuevaObra') crearObra();
+        else if (id === 'inputNuevaPartida') crearPartida();
+        else if (id === 'inputNuevoCliente') crearCliente();
+        else crearTrabajador();
+    }});
+});
+
+// ═══════════ PWA REGISTRATION ═══════════
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').then(reg => {
+        console.log('Service Worker registrado');
+    }).catch(err => {
+        console.log('Service Worker error:', err);
+    });
+}
+
+// ═══════════ INIT ═══════════
+initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); render();
+console.log('✅ App Mediciones v12 - Con eliminación de obras y PWA');
+</script>
+</body>
+</html>
