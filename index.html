@@ -52,12 +52,15 @@
             -webkit-appearance: none; appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23757575' d='M5 7L1 3h8z'/%3E%3C/svg%3E");
             background-repeat: no-repeat; background-position: right 8px center;
-            padding-right: 22px; flex: 1; min-width: 0;
+            padding-right: 22px; flex: 1; min-width: 80px;
         }
         .btn-icon-sm {
-            width: 28px; height: 28px; padding: 0; border: 1.5px solid var(--border);
+            width: 32px; height: 32px; padding: 0; border: 1.5px solid var(--border);
             border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
-            font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .btn-icon-sm.danger-btn {
+            background: #ffebee; color: #C62828; border-color: #C62828;
         }
         .btn-sm-filter {
             padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -66,7 +69,6 @@
         .btn-sm-filter.active { background: var(--primary); color: white; border-color: var(--primary); }
         .btn-sm-filter.certified-filter.active { background: var(--certified); border-color: var(--certified); }
         .btn-sm-filter.danger { background: #ffebee; color: var(--danger); border-color: var(--danger); }
-        .btn-sm-filter.danger.active { background: var(--danger); color: white; border-color: var(--danger); }
         .medicion-card {
             background: var(--surface); border-radius: 8px; padding: 6px 8px;
             margin-bottom: 4px; box-shadow: var(--shadow); border-left: 4px solid var(--warning);
@@ -96,7 +98,7 @@
         .btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
         .btn-success { background: var(--success); color: white; }
         .btn-certified { background: var(--certified); color: white; }
-        .btn-danger { background: #ffebee; color: var(--danger); }
+        .btn-danger { background: #ffebee; color: var(--danger); border: 1.5px solid var(--danger); }
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border);
             display: flex; gap: 4px; padding: 5px 8px; padding-bottom: max(5px, env(safe-area-inset-bottom));
@@ -170,6 +172,9 @@
             background: var(--surface); padding: 3px 6px; border-radius: 4px;
             margin-bottom: 2px; display: flex; justify-content: space-between; font-size: 0.65rem;
         }
+        .obra-actions {
+            display: flex; gap: 4px; align-items: center;
+        }
         @media (min-width: 600px) {
             .modal { border-radius: 14px; margin: 10px; max-height: 85vh; }
             .modal-overlay { align-items: center; }
@@ -185,9 +190,13 @@
 
 <main class="main-content">
     <div class="filtro-bar">
-        <select id="selectObra" onchange="filtrar()"><option value="">🏗️ Todas las obras</option></select>
-        <button class="btn-icon-sm" onclick="abrirModalNuevaObra()" title="Nueva obra">🏗️➕</button>
-        <button id="btnEliminarObra" class="btn-icon-sm" onclick="eliminarObraSeleccionada()" title="Eliminar obra" style="display:none; background:#ffebee; color:#C62828; border-color:#C62828;">🗑️</button>
+        <select id="selectObra" onchange="onObraSeleccionada()" style="flex:2; min-width:120px;">
+            <option value="">🏗️ Todas las obras</option>
+        </select>
+        <div class="obra-actions">
+            <button class="btn-icon-sm" onclick="abrirModalNuevaObra()" title="Nueva obra">🏗️➕</button>
+            <button id="btnEliminarObra" class="btn-icon-sm danger-btn" onclick="eliminarObraSeleccionada()" title="Eliminar obra seleccionada" style="display:none;">🗑️</button>
+        </div>
         <button class="btn-icon-sm" onclick="backupData()" title="Copia seguridad">💾</button>
         <button class="btn-icon-sm" onclick="restoreData()" title="Restaurar copia">📥</button>
         <button class="btn-sm-filter active" data-tipo="todas" onclick="setFiltroTipo('todas', this)">T</button>
@@ -223,6 +232,16 @@
     </div>
 </div></div>
 
+<div class="modal-overlay" id="modalConfirmOverlay"><div class="modal" style="max-height:auto;">
+    <button class="modal-close" onclick="cerrarModalConfirm()">✕</button><h3 id="confirmTitulo">⚠️ Confirmar</h3>
+    <div id="confirmMensaje" style="margin-bottom:10px;"></div>
+    <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline" onclick="cerrarModalConfirm()" style="flex:1;">Cancelar</button>
+        <button class="btn btn-danger" id="confirmBtn" style="flex:1;">Eliminar</button>
+    </div>
+</div></div>
+
+<!-- Resto de modales (Partida, Cliente, Trabajador, Medicion, Export) -->
 <div class="modal-overlay" id="modalPartidaOverlay"><div class="modal" style="max-height:auto;">
     <button class="modal-close" onclick="cerrarModalPartida()">✕</button><h3 id="modalPartidaTitulo">➕ Nueva subpartida</h3>
     <div class="form-group"><label>Nombre *</label><input type="text" id="inputNuevaPartida" placeholder="Ej: ZÓCALO" autofocus></div>
@@ -307,15 +326,6 @@
     </div>
 </div></div>
 
-<div class="modal-overlay" id="modalConfirmOverlay"><div class="modal" style="max-height:auto;">
-    <button class="modal-close" onclick="cerrarModalConfirm()">✕</button><h3 id="confirmTitulo">⚠️ Confirmar</h3>
-    <div id="confirmMensaje" style="margin-bottom:10px;"></div>
-    <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline" onclick="cerrarModalConfirm()" style="flex:1;">Cancelar</button>
-        <button class="btn btn-danger" id="confirmBtn" style="flex:1;">Eliminar</button>
-    </div>
-</div></div>
-
 <div id="toastContainer"></div>
 
 <script>
@@ -361,32 +371,25 @@ function normalizar(s) {
 }
 
 // ═══════════ OBRAS ═══════════
+function onObraSeleccionada() {
+    const obraSel = document.getElementById('selectObra').value;
+    const btnEliminar = document.getElementById('btnEliminarObra');
+    if (obraSel && obraSel !== '') {
+        btnEliminar.style.display = 'inline-flex';
+        btnEliminar.title = `Eliminar obra: ${obraSel}`;
+    } else {
+        btnEliminar.style.display = 'none';
+    }
+    filtrar();
+}
+
 function abrirModalNuevaObra() {
     document.getElementById('inputNuevaObra').value = '';
     document.getElementById('obraSimilarWarning').style.display = 'none';
     document.getElementById('modalObraOverlay').classList.add('active');
     setTimeout(() => document.getElementById('inputNuevaObra').focus(), 300);
-    document.getElementById('inputNuevaObra').addEventListener('input', buscarObrasSimilares);
 }
 function cerrarModalObra() { document.getElementById('modalObraOverlay').classList.remove('active'); }
-
-function buscarObrasSimilares() {
-    const nombre = document.getElementById('inputNuevaObra').value.trim();
-    const warning = document.getElementById('obraSimilarWarning');
-    if (!nombre || nombre.length < 2) { warning.style.display = 'none'; return; }
-    const nombreN = normalizar(nombre);
-    const similares = appData.obras.filter(o => {
-        const oN = normalizar(o);
-        return oN !== nombreN && (oN.includes(nombreN) || nombreN.includes(oN) || 
-            oN.split(' ').some(p => nombreN.includes(p)) || nombreN.split(' ').some(p => oN.includes(p)));
-    });
-    if (similares.length > 0) {
-        warning.style.display = 'block';
-        warning.innerHTML = `⚠️ Obras similares:<br>${similares.map(s => `• ${s}`).join('<br>')}<br><small>Revisa si ya existe antes de crear</small>`;
-    } else {
-        warning.style.display = 'none';
-    }
-}
 
 function crearObra() {
     const nombre = document.getElementById('inputNuevaObra').value.trim();
@@ -398,7 +401,7 @@ function crearObra() {
             cerrarModalObra();
             initObras();
             document.getElementById('selectObra').value = existente;
-            render();
+            onObraSeleccionada();
             toast('✅ Obra seleccionada');
             return;
         }
@@ -406,13 +409,17 @@ function crearObra() {
     if (appData.obras.includes(nombre)) return toast('⚠️ Esa obra ya existe');
     appData.obras.push(nombre); appData.obras.sort(); save(); cerrarModalObra(); initObras();
     if (document.getElementById('modalOverlay').classList.contains('active')) { initObrasModal(); document.getElementById('medObra').value = nombre; }
-    render(); toast('🏗️ Obra creada');
+    onObraSeleccionada();
+    toast('🏗️ Obra creada');
 }
 
 // ═══════════ ELIMINAR OBRA ═══════════
 function eliminarObraSeleccionada() {
     const obraSel = document.getElementById('selectObra').value;
-    if (!obraSel) return;
+    if (!obraSel || obraSel === '') {
+        toast('⚠️ Selecciona una obra primero');
+        return;
+    }
     
     const medicionesAsociadas = appData.mediciones.filter(m => m.site_name === obraSel);
     let totalM2 = 0;
@@ -422,12 +429,12 @@ function eliminarObraSeleccionada() {
     
     mostrarConfirmacion(
         '🗑️ Eliminar Obra',
-        `<div style="margin-bottom:8px;"><strong>${obraSel}</strong></div>
-         <div style="background:#ffebee; padding:8px; border-radius:4px; margin:8px 0;">
-            📊 ${medicionesAsociadas.length} mediciones asociadas<br>
-            📐 ${totalM2.toFixed(2)} m² totales
+        `<div style="margin-bottom:8px;"><strong style="font-size:1rem;">${obraSel}</strong></div>
+         <div style="background:#ffebee; padding:10px; border-radius:8px; margin:10px 0;">
+            📊 <strong>${medicionesAsociadas.length}</strong> mediciones asociadas<br>
+            📐 <strong>${totalM2.toFixed(2)}</strong> m² totales
          </div>
-         <div style="color:var(--danger); font-weight:bold;">⚠️ Esta acción NO se puede deshacer. Se eliminarán TODAS las mediciones de esta obra.</div>`,
+         <div style="color:var(--danger); font-weight:bold; text-align:center;">⚠️ Esta acción NO se puede deshacer</div>`,
         function() {
             // Eliminar la obra y sus mediciones
             const index = appData.obras.indexOf(obraSel);
@@ -435,13 +442,12 @@ function eliminarObraSeleccionada() {
             appData.mediciones = appData.mediciones.filter(m => m.site_name !== obraSel);
             save();
             
-            // Limpiar filtro si estaba seleccionada
-            if (document.getElementById('selectObra').value === obraSel) {
-                document.getElementById('selectObra').value = '';
-            }
+            // Limpiar filtro
+            document.getElementById('selectObra').value = '';
             initObras();
+            onObraSeleccionada();
             render();
-            toast('✅ Obra y mediciones eliminadas');
+            toast(`✅ Obra "${obraSel}" y sus ${medicionesAsociadas.length} mediciones eliminadas`);
             cerrarModalConfirm();
         }
     );
@@ -538,15 +544,6 @@ function initObras() {
     const s = document.getElementById('selectObra'), v = s.value;
     s.innerHTML = appData.obras.length === 0 ? '<option value="">🏗️ Sin obras</option>' : '<option value="">🏗️ Todas las obras</option>' + appData.obras.map(o => `<option value="${o}">${o}</option>`).join('');
     s.value = v;
-    
-    // Mostrar/ocultar botón de eliminar obra
-    const btnEliminar = document.getElementById('btnEliminarObra');
-    if (v && v !== '') {
-        btnEliminar.style.display = 'flex';
-        btnEliminar.title = `Eliminar obra: ${v}`;
-    } else {
-        btnEliminar.style.display = 'none';
-    }
 }
 function initObrasModal() {
     const s = document.getElementById('medObra');
@@ -587,7 +584,6 @@ function render() {
     document.getElementById('statSolado').textContent = stats.solado.toFixed(2);
     document.getElementById('statTotal').textContent = (stats.alicatado + stats.solado).toFixed(2);
 
-    // Stats por trabajador
     const wsDiv = document.getElementById('workerStats');
     if (Object.keys(workerStats).length > 0 && obraSel) {
         wsDiv.style.display = 'block';
@@ -606,7 +602,7 @@ function render() {
         let tM2 = 0; m.lineas.forEach(l => tM2 += l.parcial || 0);
         const l1 = m.lineas[0] || {};
         const cls = m.certificada ? 'certificada' : (m.enviada ? 'enviada' : (m.tipo==='alicatado'?'tipo-alicatado':'tipo-solado'));
-        return `<div class="medicion-card ${cls}" onclick="editar(${actualIdx})">
+        return `<div class="medicion-card ${cls}" onclick="editar(${actualIdx})" oncontextmenu="event.preventDefault();mostrarMenuMedicion(event, ${actualIdx})">
             <div class="partida-nombre">${tipoBadge} ${nombreCompletoPartida(m)} ${estadoBadge(m)}</div>
             <div class="info-linea">${l1.bloque?'B:'+l1.bloque:''}${l1.planta?' P:'+l1.planta:''}${l1.largo?' '+l1.largo+'×'+l1.ancho+'m':''}${m.lineas.length>1?` +${m.lineas.length-1}z`:''}</div>
             <div class="info-linea" style="color:#aaa;">🏗️${m.site_name||'—'} 👤${m.trabajador||'—'} ${m.cliente||''}</div>
@@ -672,20 +668,9 @@ function guardar() {
     const med = {tipo,subpartida,partida_codigo:(tipo==='alicatado'?'ALICATADO':'SOLADO')+' - '+subpartida,site_name:site,cliente:clienteVal,fecha:document.getElementById('medFecha').value,trabajador:trabajadorVal,lineas,enviada:false,certificada:false,created_at:new Date().toISOString()};
     if (editIdx >= 0) { med.enviada = appData.mediciones[editIdx].enviada; med.certificada = appData.mediciones[editIdx].certificada; appData.mediciones[editIdx] = med; }
     else { appData.mediciones.push(med); }
-    save(); cerrarModal(); initObras(); render(); toast('✅ Guardado');
+    save(); cerrarModal(); initObras(); onObraSeleccionada(); render(); toast('✅ Guardado');
 }
 function editar(idx) { abrirModalMedicion(idx); }
-
-// ═══════════ DUPLICAR ═══════════
-function duplicarMedicion(idx) {
-    const orig = appData.mediciones[idx];
-    if (!orig) return;
-    const copia = JSON.parse(JSON.stringify(orig));
-    copia.enviada = false; copia.certificada = false; copia.created_at = new Date().toISOString();
-    copia.lineas = copia.lineas.map(l => ({...l}));
-    appData.mediciones.push(copia); save(); render();
-    toast('📋 Duplicada');
-}
 
 // ═══════════ ELIMINAR MEDICIÓN ═══════════
 function eliminarMedicion(idx) {
@@ -701,10 +686,40 @@ function eliminarMedicion(idx) {
             appData.mediciones.splice(idx, 1);
             save();
             initObras();
+            onObraSeleccionada();
             render();
             toast('🗑️ Medición eliminada');
         }
     );
+}
+
+// ═══════════ MENÚ CONTEXTUAL ═══════════
+function mostrarMenuMedicion(event, idx) {
+    event.preventDefault();
+    const acciones = [
+        { label: '✏️ Editar', action: () => editar(idx) },
+        { label: '📋 Duplicar', action: () => duplicarMedicion(idx) },
+        { label: '⭐ Certificar', action: () => toggleCertificada(idx) },
+        { label: '🗑️ Eliminar', action: () => eliminarMedicion(idx), danger: true }
+    ];
+    // Menú contextual simple usando confirm
+    const opciones = acciones.map((a, i) => `${i+1}. ${a.label}`).join('\n');
+    const respuesta = prompt(`Selecciona una acción:\n\n${opciones}\n\n0. Cancelar`, '0');
+    const seleccion = parseInt(respuesta);
+    if (seleccion >= 1 && seleccion <= acciones.length) {
+        acciones[seleccion-1].action();
+    }
+}
+
+// ═══════════ DUPLICAR ═══════════
+function duplicarMedicion(idx) {
+    const orig = appData.mediciones[idx];
+    if (!orig) return;
+    const copia = JSON.parse(JSON.stringify(orig));
+    copia.enviada = false; copia.certificada = false; copia.created_at = new Date().toISOString();
+    copia.lineas = copia.lineas.map(l => ({...l}));
+    appData.mediciones.push(copia); save(); render();
+    toast('📋 Duplicada');
 }
 
 // ═══════════ CERTIFICAR ═══════════
@@ -779,6 +794,7 @@ function limpiarEnviadas() {
             appData.mediciones=appData.mediciones.filter(m=>!m.enviada||m.certificada);
             save();
             initObras();
+            onObraSeleccionada();
             render();
             toast('🗑️ Limpiado');
         }
@@ -814,7 +830,7 @@ function restoreData() {
                         if (!appData.subpartidas_personalizadas) appData.subpartidas_personalizadas = { alicatado: [], solado: [] };
                         if (!appData.clientes) appData.clientes = [];
                         if (!appData.trabajadores) appData.trabajadores = [];
-                        save(); initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); render();
+                        save(); initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); onObraSeleccionada(); render();
                         toast('📥 Copia restaurada');
                     }
                 );
@@ -846,12 +862,15 @@ document.addEventListener('keydown', function(e) {
 document.getElementById('confirmBtn').addEventListener('click', ejecutarConfirmacion);
 
 ['inputNuevaObra','inputNuevaPartida','inputNuevoCliente','inputNuevoTrabajador'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', function(e) { if (e.key === 'Enter') {
-        if (id === 'inputNuevaObra') crearObra();
-        else if (id === 'inputNuevaPartida') crearPartida();
-        else if (id === 'inputNuevoCliente') crearCliente();
-        else crearTrabajador();
-    }});
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('keydown', function(e) { if (e.key === 'Enter') {
+            if (id === 'inputNuevaObra') crearObra();
+            else if (id === 'inputNuevaPartida') crearPartida();
+            else if (id === 'inputNuevoCliente') crearCliente();
+            else crearTrabajador();
+        }});
+    }
 });
 
 // ═══════════ PWA REGISTRATION ═══════════
@@ -864,7 +883,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ═══════════ INIT ═══════════
-initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); render();
+initObras(); actualizarSelectPartidas(); actualizarSelectClientes(); actualizarSelectTrabajadores(); onObraSeleccionada(); render();
 console.log('✅ App Mediciones v12 - Con eliminación de obras y PWA');
 </script>
 </body>
